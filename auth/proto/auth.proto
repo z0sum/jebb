@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package go.micro.srv.auth;
+
+message RegisterRequest {
+  string username = 1;
+}
+
+message RegisterResponse {
+  string username = 1;
+  string password = 2;
+  string id = 3;
+}
+
+service AuthService {
+  rpc Register(RegisterRequest) returns (RegisterResponse) {}
+}
