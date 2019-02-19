@@ -15,21 +15,30 @@ func main() {
 	usr, _ := user.Current()
 	cfg, err := readConfig(usr)
 	if err != nil {
-		cfg = authRegister(usr)
+		cfg, err = authRegister(usr)
+		if err != nil {
+			log.Printf("[ERROR] registration %v", err)
+		}
+	}
+
+	res := logIn(cfg)
+	if !res {
+		log.Println("[err | Login]")
 	}
 
 	header(cfg)
 
 	prompt := promptui.Select{
-		Label: "|",
+		Label: "SELECT",
 		Items: []string{"fileshare", "chat"},
 	}
-	_, res, _ := prompt.Run()
-	switch res {
+	_, p, _ := prompt.Run()
+
+	switch p {
 	case "fileshare":
-		log.Println("fileshare")
+		Fileshare(cfg)
 	case "chat":
-		chat(cfg)
+		Chat(cfg)
 	}
 
 }

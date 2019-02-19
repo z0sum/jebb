@@ -12,6 +12,16 @@ message RegisterResponse {
   string id = 3;
 }
 
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  bool logged_in = 1;
+}
+
 service AuthService {
   rpc Register(RegisterRequest) returns (RegisterResponse) {}
+  rpc Login(LoginRequest) returns (LoginResponse) {}
 }

@@ -1,2 +1,2 @@
 build:
-	protoc --micro_out=. --go_out=. proto/chat.proto
+	protoc --go_out=plugins=grpc:. proto/chat.proto

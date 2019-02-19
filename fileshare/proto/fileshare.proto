@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package go.jebb.fileshare;
+
+message ReceiveRequest { string username = 1; }
+
+message SendResponse {
+  int64 blobs = 1;
+  int64 total_size = 2;
+  int64 time_taken = 3;
+  string filename = 4;
+  bool succesful = 5;
+}
+
+message Blob {
+  string id = 1;
+  bytes data = 2;
+  int64 count = 3;
+  int64 total_blobs = 4;
+  string filename = 5;
+  string receiver = 6;
+}
+
+service FileshareService {
+  rpc Send (stream Blob) returns (SendResponse) {}
+  rpc Receive (ReceiveRequest) returns (stream Blob) {}
+}

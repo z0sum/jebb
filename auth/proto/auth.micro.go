@@ -10,6 +10,8 @@ It is generated from these files:
 It has these top-level messages:
 	RegisterRequest
 	RegisterResponse
+	LoginRequest
+	LoginResponse
 */
 package go_micro_srv_auth
 
@@ -43,6 +45,7 @@ var _ server.Option
 
 type AuthService interface {
 	Register(ctx context.Context, in *RegisterRequest, opts ...client.CallOption) (*RegisterResponse, error)
+	Login(ctx context.Context, in *LoginRequest, opts ...client.CallOption) (*LoginResponse, error)
 }
 
 type authService struct {
@@ -73,15 +76,27 @@ func (c *authService) Register(ctx context.Context, in *RegisterRequest, opts ..
 	return out, nil
 }
 
+func (c *authService) Login(ctx context.Context, in *LoginRequest, opts ...client.CallOption) (*LoginResponse, error) {
+	req := c.c.NewRequest(c.name, "AuthService.Login", in)
+	out := new(LoginResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for AuthService service
 
 type AuthServiceHandler interface {
 	Register(context.Context, *RegisterRequest, *RegisterResponse) error
+	Login(context.Context, *LoginRequest, *LoginResponse) error
 }
 
 func RegisterAuthServiceHandler(s server.Server, hdlr AuthServiceHandler, opts ...server.HandlerOption) error {
 	type authService interface {
 		Register(ctx context.Context, in *RegisterRequest, out *RegisterResponse) error
+		Login(ctx context.Context, in *LoginRequest, out *LoginResponse) error
 	}
 	type AuthService struct {
 		authService
@@ -96,4 +111,8 @@ type authServiceHandler struct {
 
 func (h *authServiceHandler) Register(ctx context.Context, in *RegisterRequest, out *RegisterResponse) error {
 	return h.AuthServiceHandler.Register(ctx, in, out)
+}
+
+func (h *authServiceHandler) Login(ctx context.Context, in *LoginRequest, out *LoginResponse) error {
+	return h.AuthServiceHandler.Login(ctx, in, out)
 }

@@ -1,26 +1,34 @@
 syntax = "proto3";
 
-package go.micro.srv.chat;
+package go.jebb.chat;
 
-message RegisterRequest { 
-    string username = 1; 
-    string password = 2;
-    string id = 3;
+message LoginRequest {
+  string username = 1;
+  string password = 2;
 }
-message RegisterResponse { bool connected = 1; }
 
-message UnregisterRequest { string username = 1; }
-message UnregisterResponse { bool connected = 1; }
+message LoginResponse { bool logged_in = 1; }
+
+message OnlineRequest {}
+message OnlineResponse { repeated string users = 1; }
 
 message Message {
-  string sender = 1;
-  string receiver = 2;
-  string msg = 3;
-  int32 type = 4;
+  int32  message_type = 1;
+  string sender = 2;
+  string receiver = 3;
+  string msg = 4;
+}
+
+message LogoutRequest {
+  string username = 1;
+}
+message LogoutResponse {
+  bool logged_out = 1;
 }
 
 service ChatService {
-  rpc Register(RegisterRequest) returns (RegisterResponse) {}
-  rpc Unregister(UnregisterRequest) returns (UnregisterResponse) {}
+  rpc Login(LoginRequest) returns (LoginResponse) {}
+  rpc Online(OnlineRequest) returns (OnlineResponse) {}
   rpc Socket(stream Message) returns (stream Message) {}
+  rpc Logout(LogoutRequest) returns (LogoutResponse) {}
 }

@@ -12,14 +12,15 @@ import (
 	"time"
 
 	"github.com/manifoldco/promptui"
-	microclient "github.com/micro/go-micro/client"
-	authpb "github.com/z0sum/jebb/auth/proto"
+	apipb "github.com/z0sum/jebb/api/proto"
+	"google.golang.org/grpc"
 )
 
 type Config struct {
 	Username string
 	Password string
 	Id       string
+	Dir      string
 }
 
 const (
@@ -31,7 +32,7 @@ func readConfig(u *user.User) (Config, error) {
 	var cfg Config
 
 	home := u.HomeDir
-	path := home + "/" + cfgName
+	path := home + "/" + os.Args[1] + cfgName
 
 	f, err := os.Open(path)
 	if err != nil {
@@ -51,15 +52,15 @@ func readConfig(u *user.User) (Config, error) {
 	return cfg, nil
 }
 
-func authRegister(usr *user.User) Config {
+func authRegister(usr *user.User) (Config, error) {
 
 	var cfg Config
 
 	newUserText()
 
 	validate := func(input string) error {
-		if len(input) <= 5 {
-			return errors.New("Username must be > 5 characters")
+		if len(input) <= 3 {
+			return errors.New("Username must be > 3 characters")
 		}
 		return nil
 	}
@@ -67,57 +68,113 @@ func authRegister(usr *user.User) Config {
 		Label:    "username",
 		Validate: validate,
 	}
-	username, _ := prompt.Run()
+	uname, _ := prompt.Run()
 
-	client := authpb.NewAuthService("go.micro.srv.auth", microclient.DefaultClient)
+	validate = func(input string) error {
+		return nil
+	}
+	prompt = promptui.Prompt{
+		Label:    "fileshare dir path (~/...)",
+		Validate: validate,
+	}
+	dir, _ := prompt.Run()
 
-	r, err := client.Register(context.Background(), &authpb.RegisterRequest{Username: username})
+	cfg, err := signup(uname)
 	if err != nil {
-		return cfg
+		return cfg, err
 	}
 
-	cfg = Config{
-		Username: r.Username,
-		Password: r.Password,
-		Id:       r.Id,
-	}
+	//log.Println(cfg)
 
-	saveConfig(usr, &cfg)
+	cfg.Dir = dir
 
-	return cfg
+	saveConfig(usr, cfg)
+
+	return cfg, nil
 
 }
 
-func saveConfig(u *user.User, cfg *Config) {
+func signup(uname string) (Config, error) {
+
+	cc, err := grpc.Dial("localhost:50055", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("could not connect: %v", err)
+	}
+	defer cc.Close()
+
+	client := apipb.NewAuthServiceClient(cc)
+
+	res, err := client.Signup(context.Background(), &apipb.SignupRequest{Username: uname})
+	if err != nil {
+		log.Printf("[Signup Res ERR] %v", err)
+		return Config{}, err
+	}
+
+	log.Printf("[Signup Res] %v", res)
+
+	return Config{
+		Username: res.Username,
+		Password: res.Password,
+		Id:       res.Id,
+	}, nil
+
+}
+
+func saveConfig(u *user.User, cfg Config) error {
 
 	home := u.HomeDir
-	path := home + "/" + cfgName
+	path := home + "/" + os.Args[1] + cfgName
 
-	json, err := json.Marshal(*cfg)
+	json, err := json.Marshal(cfg)
 	f, err := os.Create(path)
 	if err != nil {
 		log.Printf("[ERROR] %v", err)
-		return
+		return err
 	}
 	defer f.Close()
 
 	_, err = f.Write(json)
 	if err != nil {
 		log.Printf("[ERROR] %v", err)
-		return
+		return err
 	}
 
-	log.Printf("[CREATED CONFIG] %+v", cfg)
+	return nil
 }
 
 func newUserText() {
-	sleep(500)
+	sleep(400)
 	fmt.Println("> You have not been registered.")
-	sleep(1000)
+	sleep(400)
 	fmt.Println("> Please enter a username below")
-	sleep(1000)
+	sleep(400)
 }
 
 func sleep(t int) {
 	time.Sleep(time.Duration(t) * time.Millisecond)
+}
+
+func logIn(cfg Config) bool {
+
+	cc, err := grpc.Dial("localhost:50055", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("could not connect: %v", err)
+	}
+	defer cc.Close()
+
+	client := apipb.NewAuthServiceClient(cc)
+
+	res, err := client.Login(
+		context.Background(),
+		&apipb.LoginRequest{Username: cfg.Username, Password: cfg.Password},
+	)
+	if err != nil {
+		log.Printf("[Login Res ERR] %v", err)
+		return false
+	}
+
+	log.Printf("[Login Res] %v", res)
+
+	return res.LoggedIn
+
 }
